@@ -29,6 +29,4 @@ DirectoryIndex index.php
   ExpiresByType application/javascript "access plus 1 week"
 </IfModule>
 
-php_value upload_max_filesize 20M
-php_value post_max_size 60M
-php_value max_execution_time 60
+# Limites de PHP estão configurados em .user.ini (compatível com PHP-FPM/CGI da Hostgator)
