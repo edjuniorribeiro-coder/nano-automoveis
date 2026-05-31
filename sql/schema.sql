@@ -120,7 +120,8 @@ INSERT INTO users (nome, email, senha_hash, role)
 VALUES (
   'Administrador',
   'admin@nanoautomoveis.com.br',
-  '$2y$10$wH5y8j9Z1QcUe7G/8KlqHurAUI8nM5pHkqzVeUvLgZQYn5d4JuKQS',
+  '$2b$10$Z7V1fBGfRlrOGuWhokFdFeVcFw.PxUOSa8Jd3w..K8G4lmmDwFWqK',
   'proprietario'
 );
+-- ⚠️ Senha inicial: nanoadmin123
 -- ⚠️ Após o primeiro login, vá em /admin/usuarios e troque a senha!
