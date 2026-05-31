@@ -154,14 +154,11 @@ INSERT INTO lead_interactions (lead_id, user_id, tipo, conteudo, created_at) VAL
 
 -- ============================================================
 -- VENDAS — Financeiro demo
+-- (car_id é NOT NULL — sempre vinculamos a um carro do estoque)
 -- ============================================================
 INSERT INTO sales (car_id, lead_id, vendedor_id, cliente_nome, cliente_documento, cliente_telefone, valor_venda, forma_pagamento, comissao, observacoes, data_venda) VALUES
   (11, 11, 2, 'Marcos Vinicius Carvalho',  '123.456.789-00', '(11) 99123-4567', 119900.00, 'Financiamento',     3597.00, 'Financiado em 48x via Santander', DATE_SUB(CURDATE(), INTERVAL 12 DAY)),
-  (NULL, 12, 3, 'Carla Souza Pereira',     '987.654.321-00', '(11) 98234-5678',  58500.00, 'À Vista',           1755.00, 'Pagamento via TED, sem entrada',  DATE_SUB(CURDATE(), INTERVAL 18 DAY));
-
--- Atualiza o car_id da segunda venda (Carla Souza)
--- (deixei NULL acima porque o carro original já foi removido do estoque)
-UPDATE sales SET car_id = 1 WHERE car_id IS NULL LIMIT 1;
+  (1,  12, 3, 'Carla Souza Pereira',       '987.654.321-00', '(11) 98234-5678',  58500.00, 'À Vista',           1755.00, 'Pagamento via TED, sem entrada',  DATE_SUB(CURDATE(), INTERVAL 18 DAY));
 
 SET FOREIGN_KEY_CHECKS = 1;
 
