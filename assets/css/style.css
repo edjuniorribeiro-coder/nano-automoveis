@@ -207,8 +207,6 @@ table.tbl img.thumb { width: 3.5rem; height: 3.5rem; object-fit: cover; border-r
 .kanban-head { padding: 1rem; border-bottom: 1px solid var(--w5); display: flex; align-items: center; justify-content: space-between; }
 .kanban-head h3 { font-size: .85rem; font-weight: 700; text-transform: uppercase; }
 .kanban-body { padding: .75rem; display: flex; flex-direction: column; gap: .5rem; max-height: 70vh; overflow-y: auto; }
-.lead-card { background: rgba(10,10,10,.4); padding: .75rem; border-radius: .375rem; display: block; transition: background .15s; }
-.lead-card:hover { background: var(--black); }
 .lead-card .nome { font-weight: 600; font-size: .9rem; }
 .lead-card .carro { font-size: .75rem; color: var(--yellow); margin-top: .15rem; }
 .lead-card .fone { font-size: .75rem; color: var(--w50); margin-top: .25rem; }
@@ -220,6 +218,21 @@ table.tbl img.thumb { width: 3.5rem; height: 3.5rem; object-fit: cover; border-r
 .flash.success { background: rgba(34,197,94,.95); color: #fff; }
 .flash.error { background: rgba(239,68,68,.95); color: #fff; }
 @keyframes fadeOut { 0%,80% { opacity: 1; } 100% { opacity: 0; visibility: hidden; } }
+
+/* WhatsApp icon button (inline em listas/cards) */
+.btn-wa-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--wa); color: #fff; border-radius: 50%; transition: transform .15s; flex-shrink: 0; }
+.btn-wa-icon:hover { transform: scale(1.1); filter: brightness(1.1); }
+.btn-wa-mini { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .6rem; background: var(--wa); color: #fff; border-radius: .25rem; font-size: .7rem; font-weight: 600; transition: filter .15s; }
+.btn-wa-mini:hover { filter: brightness(1.15); }
+
+/* Modal overlay genérico */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 200; align-items: center; justify-content: center; padding: 1rem; backdrop-filter: blur(4px); }
+.modal-overlay > .card { animation: modalIn .2s ease-out; }
+@keyframes modalIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+/* Lead card — separar a área clicável do botão WhatsApp */
+.lead-card { background: rgba(10,10,10,.4); padding: .75rem; border-radius: .375rem; transition: background .15s; }
+.lead-card:hover { background: var(--black); }
 
 /* Utility */
 .grid { display: grid; }

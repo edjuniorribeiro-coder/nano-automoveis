@@ -4,7 +4,7 @@
   <div class="container footer-grid">
     <div>
       <a class="logo"><span class="logo-mark">NANO</span><span class="logo-sub">AUTOMÓVEIS</span></a>
-      <p class="text-sm" style="color:var(--w50);margin-top:1rem">Seminovos selecionados com procedência. Sua próxima conquista começa aqui.</p>
+      <p class="text-sm" style="color:var(--w50);margin-top:1rem">Seminovos com procedência, atendimento humano e a confiança que você precisa pra dar o próximo passo. Há mais de uma década realizando sonhos sobre rodas.</p>
     </div>
     <div>
       <h4>Navegação</h4>

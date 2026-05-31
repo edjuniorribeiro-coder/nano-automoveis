@@ -27,6 +27,46 @@ $cores = ['Branco','Preto','Prata','Cinza','Azul','Vermelho','Verde','Bege','Dou
   <a href="/admin/carros" class="btn btn-ghost">← Voltar</a>
 </div>
 
+<!-- Consulta FIPE — preenche marca/modelo/ano automaticamente -->
+<?php if (!$car): ?>
+<div class="card form-section mb-4" style="border-color:rgba(242,226,5,.3);background:linear-gradient(135deg, rgba(242,226,5,.05), transparent)">
+  <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:.75rem">
+    <div>
+      <h2 style="margin-bottom:.25rem">🔍 Consulta FIPE</h2>
+      <p style="color:var(--w70);font-size:.85rem;margin:0">Selecione marca → modelo → ano e o sistema preenche os campos automaticamente.</p>
+    </div>
+    <span class="chip yellow" style="font-size:.7rem">🚀 Economize tempo</span>
+  </div>
+  <div class="form-grid cols-3">
+    <div>
+      <label class="label">Marca FIPE</label>
+      <select class="input" id="fipe-marca">
+        <option value="">Carregando…</option>
+      </select>
+    </div>
+    <div>
+      <label class="label">Modelo FIPE</label>
+      <select class="input" id="fipe-modelo" disabled>
+        <option value="">Selecione a marca primeiro</option>
+      </select>
+    </div>
+    <div>
+      <label class="label">Ano FIPE</label>
+      <select class="input" id="fipe-ano" disabled>
+        <option value="">Selecione o modelo primeiro</option>
+      </select>
+    </div>
+  </div>
+  <div id="fipe-resultado" style="display:none;margin-top:1rem;padding:1rem;background:rgba(34,197,94,.1);border-radius:.5rem;border:1px solid rgba(34,197,94,.3)">
+    <div class="flex items-center gap-2">
+      <span style="font-size:1.25rem">✅</span>
+      <strong style="color:#4ade80">Dados preenchidos automaticamente!</strong>
+    </div>
+    <p id="fipe-preco" style="margin-top:.5rem;font-size:.9rem;color:var(--w70)"></p>
+  </div>
+</div>
+<?php endif; ?>
+
 <form method="POST" action="/admin/carros/salvar" enctype="multipart/form-data">
   <input type="hidden" name="_csrf" value="<?= e(csrfToken()) ?>">
   <?php if ($id): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
@@ -209,4 +249,107 @@ function previewFotos(input) {
     reader.readAsDataURL(file);
   });
 }
+
+// =====================================================
+// INTEGRAÇÃO API FIPE (parallelum) — preenche campos automaticamente
+// =====================================================
+(function() {
+  const API = 'https://parallelum.com.br/fipe/api/v1/carros';
+  const $marca   = document.getElementById('fipe-marca');
+  const $modelo  = document.getElementById('fipe-modelo');
+  const $ano     = document.getElementById('fipe-ano');
+  const $result  = document.getElementById('fipe-resultado');
+  const $preco   = document.getElementById('fipe-preco');
+
+  if (!$marca) return; // somente no cadastro novo
+
+  // 1) Carrega marcas ao abrir a página
+  fetch(`${API}/marcas`)
+    .then(r => r.json())
+    .then(marcas => {
+      $marca.innerHTML = '<option value="">Selecione…</option>' +
+        marcas.map(m => `<option value="${m.codigo}" data-nome="${m.nome}">${m.nome}</option>`).join('');
+    })
+    .catch(() => {
+      $marca.innerHTML = '<option value="">Erro ao carregar marcas FIPE</option>';
+    });
+
+  // 2) Ao mudar marca → carrega modelos
+  $marca.addEventListener('change', () => {
+    $modelo.innerHTML = '<option value="">Carregando…</option>';
+    $modelo.disabled = true;
+    $ano.innerHTML = '<option value="">Selecione o modelo primeiro</option>';
+    $ano.disabled = true;
+    $result.style.display = 'none';
+    if (!$marca.value) return;
+    fetch(`${API}/marcas/${$marca.value}/modelos`)
+      .then(r => r.json())
+      .then(data => {
+        $modelo.innerHTML = '<option value="">Selecione…</option>' +
+          data.modelos.map(m => `<option value="${m.codigo}" data-nome="${m.nome}">${m.nome}</option>`).join('');
+        $modelo.disabled = false;
+      });
+  });
+
+  // 3) Ao mudar modelo → carrega anos
+  $modelo.addEventListener('change', () => {
+    $ano.innerHTML = '<option value="">Carregando…</option>';
+    $ano.disabled = true;
+    $result.style.display = 'none';
+    if (!$modelo.value) return;
+    fetch(`${API}/marcas/${$marca.value}/modelos/${$modelo.value}/anos`)
+      .then(r => r.json())
+      .then(anos => {
+        $ano.innerHTML = '<option value="">Selecione…</option>' +
+          anos.map(a => `<option value="${a.codigo}">${a.nome}</option>`).join('');
+        $ano.disabled = false;
+      });
+  });
+
+  // 4) Ao mudar ano → busca dados completos e preenche os campos do form
+  $ano.addEventListener('change', () => {
+    if (!$ano.value) return;
+    fetch(`${API}/marcas/${$marca.value}/modelos/${$modelo.value}/anos/${$ano.value}`)
+      .then(r => r.json())
+      .then(data => {
+        // data: { Valor, Marca, Modelo, AnoModelo, Combustivel, CodigoFipe, MesReferencia, ... }
+        const marca = data.Marca.toUpperCase();
+        const modeloCompleto = data.Modelo;
+        const anoModelo = parseInt(data.AnoModelo);
+        const combustivel = mapearCombustivel(data.Combustivel);
+
+        // Preenche os campos do formulário
+        const f = document.querySelector('form[action="/admin/carros/salvar"]');
+        f.marca.value = marca;
+        // Tenta extrair só o modelo principal (primeira palavra) e a versão (resto)
+        const partes = modeloCompleto.split(' ');
+        f.modelo.value = partes[0].toUpperCase();
+        if (partes.length > 1) {
+          f.versao.value = partes.slice(1).join(' ');
+        }
+        f.ano_fabricacao.value = anoModelo === 32000 ? new Date().getFullYear() : anoModelo;
+        f.ano_modelo.value = anoModelo === 32000 ? new Date().getFullYear() : anoModelo;
+        if (combustivel) f.combustivel.value = combustivel;
+
+        // Sugere preço FIPE como preço de partida (sem sobrescrever se já tiver)
+        if (!f.preco.value) {
+          const valor = parseFloat(data.Valor.replace(/[R$.\s]/g, '').replace(',', '.'));
+          if (!isNaN(valor)) f.preco.value = valor.toFixed(2);
+        }
+
+        // Feedback visual
+        $preco.innerHTML = `📊 <strong>Preço FIPE de referência:</strong> ${data.Valor} <span style="color:var(--w50)">(${data.MesReferencia})</span>`;
+        $result.style.display = 'block';
+
+        // Scroll suave até o campo de KM (próximo a preencher)
+        f.km.focus();
+      });
+  });
+
+  function mapearCombustivel(c) {
+    if (!c) return null;
+    const map = { 'Gasolina':'Gasolina', 'Álcool':'Álcool', 'Diesel':'Diesel', 'Flex':'Flex' };
+    return map[c] || c;
+  }
+})();
 </script>

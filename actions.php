@@ -66,6 +66,33 @@ function handleAction(string $path): void {
             ]);
             redirect('/admin/crm/' . (int)$_POST['lead_id']);
 
+        case $path === '/admin/crm/novo':
+            $u = requireRole(['proprietario','financeiro','vendedor']);
+            csrfCheck();
+            $leadId = insertGetId('leads', [
+                'nome'           => trim($_POST['nome']),
+                'telefone'       => trim($_POST['telefone']),
+                'email'          => trim($_POST['email'] ?? '') ?: null,
+                'mensagem'       => trim($_POST['mensagem'] ?? '') ?: null,
+                'car_id'         => !empty($_POST['car_id']) ? (int)$_POST['car_id'] : null,
+                'origem'         => $_POST['origem'] ?: 'outro',
+                'status'         => $_POST['status'] ?: 'novo',
+                'responsavel_id' => !empty($_POST['responsavel_id']) ? (int)$_POST['responsavel_id'] : (int)$u['id'],
+            ]);
+            flash('Lead criado com sucesso!');
+            redirect('/admin/crm/' . $leadId);
+
+        case $path === '/admin/crm/importar':
+            $u = requireRole(['proprietario','financeiro','vendedor']);
+            csrfCheck();
+            $result = importarLeadsCSV($_FILES['csv'] ?? null, (int)$u['id']);
+            if ($result['ok']) {
+                flash("Importação concluída: {$result['imported']} lead(s) importado(s), {$result['skipped']} ignorado(s).");
+            } else {
+                flash($result['error'], 'error');
+            }
+            redirect('/admin/crm');
+
         case $path === '/admin/usuarios/atualizar':
             requireRole(['proprietario']);
             csrfCheck();
@@ -154,4 +181,85 @@ function saveCarro(array $user): void {
         insertGetId('cars', $data);
         flash('Carro cadastrado!');
     }
+}
+
+/**
+ * Importa leads de um CSV.
+ * Formato esperado (com cabeçalho):
+ *   nome,telefone,email,mensagem,origem
+ * Aceita também ;  ou \t como separador. UTF-8 ou ISO-8859-1.
+ */
+function importarLeadsCSV(?array $file, int $userId): array {
+    if (!$file || ($file['error'] ?? 999) !== UPLOAD_ERR_OK) {
+        return ['ok' => false, 'error' => 'Nenhum arquivo enviado ou erro no upload.'];
+    }
+    $tmp = $file['tmp_name'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['csv','txt'])) {
+        return ['ok' => false, 'error' => 'Arquivo precisa ser .csv ou .txt'];
+    }
+
+    // Detecta encoding e converte se necessário
+    $content = file_get_contents($tmp);
+    if (!mb_check_encoding($content, 'UTF-8')) {
+        $content = mb_convert_encoding($content, 'UTF-8', 'ISO-8859-1');
+    }
+    // Remove BOM
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+    // Detecta separador (procura na primeira linha)
+    $firstLine = strtok($content, "\n");
+    $sep = ',';
+    foreach ([';', "\t", '|'] as $s) {
+        if (substr_count($firstLine, $s) > substr_count($firstLine, $sep)) $sep = $s;
+    }
+
+    $lines = preg_split('/\r\n|\n|\r/', $content);
+    $header = str_getcsv(array_shift($lines), $sep);
+    $header = array_map(fn($h) => mb_strtolower(trim($h)), $header);
+
+    // Mapeia colunas
+    $col = function($name) use ($header) {
+        $name = mb_strtolower($name);
+        foreach ($header as $i => $h) {
+            if ($h === $name || strpos($h, $name) !== false) return $i;
+        }
+        return null;
+    };
+    $idxNome     = $col('nome');
+    $idxTelefone = $col('telefone') ?? $col('celular') ?? $col('fone') ?? $col('whatsapp');
+    $idxEmail    = $col('email') ?? $col('e-mail');
+    $idxMsg      = $col('mensagem') ?? $col('observa') ?? $col('coment');
+    $idxOrigem   = $col('origem') ?? $col('canal');
+
+    if ($idxNome === null || $idxTelefone === null) {
+        return ['ok' => false, 'error' => 'CSV precisa ter pelo menos as colunas "nome" e "telefone".'];
+    }
+
+    $imported = 0; $skipped = 0;
+    foreach ($lines as $line) {
+        if (trim($line) === '') { continue; }
+        $row = str_getcsv($line, $sep);
+        $nome     = trim($row[$idxNome] ?? '');
+        $telefone = trim($row[$idxTelefone] ?? '');
+        if ($nome === '' || $telefone === '') { $skipped++; continue; }
+
+        $origem = $idxOrigem !== null ? mb_strtolower(trim($row[$idxOrigem] ?? '')) : 'outro';
+        if (!in_array($origem, ['site','whatsapp','instagram','indicacao','outro'], true)) {
+            $origem = 'outro';
+        }
+
+        insertGetId('leads', [
+            'nome'           => $nome,
+            'telefone'       => $telefone,
+            'email'          => $idxEmail !== null ? (trim($row[$idxEmail] ?? '') ?: null) : null,
+            'mensagem'       => $idxMsg !== null ? (trim($row[$idxMsg] ?? '') ?: null) : null,
+            'origem'         => $origem,
+            'status'         => 'novo',
+            'responsavel_id' => null,
+        ]);
+        $imported++;
+    }
+
+    return ['ok' => true, 'imported' => $imported, 'skipped' => $skipped];
 }
