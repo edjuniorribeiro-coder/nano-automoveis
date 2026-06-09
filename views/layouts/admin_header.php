@@ -14,6 +14,23 @@ $nav = [
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Admin — Nano Automóveis</title>
 <link rel="stylesheet" href="/assets/css/style.css">
+<script>
+  (function(){
+    try {
+      var saved = localStorage.getItem('nano-theme');
+      if (saved === 'light' || saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', saved);
+      }
+    } catch(e){}
+  })();
+  function toggleTheme() {
+    var cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    var next = cur === 'light' ? 'dark' : 'light';
+    if (next === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    try { localStorage.setItem('nano-theme', next); } catch(e){}
+  }
+</script>
 </head><body>
 <?php if ($f = flash()): ?><div class="flash <?= e($f['type']) ?>"><?= e($f['msg']) ?></div><?php endif; ?>
 <div class="admin-wrap">
@@ -33,6 +50,9 @@ $nav = [
       </div>
       <div class="flex gap-2 mt-2">
         <a href="/" class="btn btn-ghost sm flex-1">🏠 Site</a>
+        <button type="button" class="theme-toggle" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema" style="width:2.25rem;height:2.25rem">
+          <span class="icon-dark">☀️</span><span class="icon-light">🌙</span>
+        </button>
         <a href="/logout" class="btn btn-ghost sm flex-1">Sair</a>
       </div>
     </div>
