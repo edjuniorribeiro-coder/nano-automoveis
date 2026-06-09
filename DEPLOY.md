@@ -67,6 +67,52 @@ Pronto, o site atualiza em segundos.
 
 ---
 
-## Bônus: deploy automático via Webhook (opcional, avançado)
+## Deploy automático via Webhook (já implementado em `deploy.php`)
 
-Se quiser que o deploy aconteça automaticamente a cada `git push` (sem ter que clicar no cPanel), dá pra configurar webhook do GitHub apontando para um script PHP no servidor que executa `git pull`. Posso te passar o script se interessar — mas o fluxo manual acima já é bem rápido.
+Com isso configurado, **cada `git push` para `main` atualiza o site sozinho em ~5 segundos**, sem precisar abrir o cPanel.
+
+### Setup (uma vez só)
+
+1. **Gere um segredo aleatório** (use https://www.random.org/strings/ ou execute `openssl rand -hex 32` no terminal):
+   ```
+   ex: 7f3a9c8e1b5d2f4a6c8e0b3d5f7a9c1e3b5d7f9a1c3e5b7d9f1a3c5e7b9d1f3a
+   ```
+
+2. **No servidor (cPanel → Gerenciador de Arquivos)**, edite o `config.php` e adicione:
+   ```php
+   'deploy' => [
+       'secret'      => 'COLE-SEU-SEGREDO-AQUI',
+       'repo_path'   => '/home1/edjuni41/repositories/nano-automoveis',
+       'deploy_path' => '/home1/edjuni41/nano.waveenterprise.com.br',
+       'branch'      => 'main',
+   ],
+   ```
+   ⚠️ Confira `repo_path` no cPanel → Git Version Control → o "Caminho do repositório" do `nano-automoveis`.
+
+3. **No GitHub** → repositório `nano-automoveis` → **Settings → Webhooks → Add webhook**:
+   - **Payload URL**: `https://nano.waveenterprise.com.br/deploy.php`
+   - **Content type**: `application/json`
+   - **Secret**: cole o mesmo segredo do passo 1
+   - **SSL verification**: Enable
+   - **Which events?**: Just the push event
+   - ✅ Active
+   - Clique **Add webhook**
+
+4. **Teste**: o GitHub envia automaticamente um evento `ping`. Aba "Recent Deliveries" do webhook deve mostrar resposta `200 OK` com corpo `pong`.
+
+### Como funciona
+
+- `deploy.php` recebe POST do GitHub a cada push
+- Verifica assinatura HMAC-SHA256 contra o segredo (rejeita 401 se inválido)
+- Aceita apenas eventos `push` na branch `main`
+- Roda `git fetch && git reset --hard origin/main` no repo do servidor
+- Copia `index.php`, `actions.php`, `.htaccess`, `.user.ini`, `lib/`, `views/`, `assets/`, `sql/` para o `deploy_path`
+- Preserva `uploads/` (fotos dos carros) e `config.php`
+- Log de cada deploy fica em `deploy.log` na pasta do `deploy.php`
+
+### Troubleshooting
+
+- **401 Unauthorized**: segredo no GitHub ≠ segredo no `config.php`
+- **500 + "shell_exec desabilitado"**: peça ao suporte da Hostgator pra habilitar, ou use cron como fallback
+- **404 no `/deploy.php`**: o `.htaccess` está reescrevendo a URL — confira que o arquivo está na raiz do `deploy_path`
+- **Funciona mas site não atualiza**: confira o `repo_path` no `config.php` e veja `deploy.log`

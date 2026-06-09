@@ -10,9 +10,80 @@ if (count($destaques) < 6) {
     $destaques = array_merge($destaques, $extras);
 }
 
+// Banner: SÓ carros marcados como destaque (até 5)
+$bannerCars = fetchAll(
+  "SELECT * FROM cars WHERE status = 'disponivel' AND destaque = 1 AND foto_capa IS NOT NULL AND foto_capa != '' ORDER BY created_at DESC LIMIT 5"
+);
+
 $totalEstoque = (int) fetchOne("SELECT COUNT(*) c FROM cars WHERE status='disponivel'")['c'];
 $totalVendidos = (int) fetchOne("SELECT COUNT(*) c FROM cars WHERE status='vendido'")['c'];
+$wa = config('contato')['whatsapp'];
 ?>
+
+<?php if (!empty($bannerCars)): ?>
+<section class="banner-carousel" id="bannerCarousel" data-count="<?= count($bannerCars) ?>">
+  <div class="banner-track">
+    <?php foreach ($bannerCars as $i => $car):
+      $preco = $car['preco_promocional'] ?: $car['preco'];
+      $msg = "Olá! Tenho interesse no {$car['marca']} {$car['modelo']} {$car['ano_modelo']} (" . brl($preco) . ').';
+    ?>
+    <article class="banner-slide <?= $i === 0 ? 'active' : '' ?>" data-index="<?= $i ?>">
+      <img src="<?= e($car['foto_capa']) ?>" alt="<?= e("$car[marca] $car[modelo]") ?>" loading="<?= $i === 0 ? 'eager' : 'lazy' ?>">
+      <div class="banner-overlay"></div>
+      <div class="container banner-content">
+        <span class="chip yellow">★ Em destaque</span>
+        <h2><?= e("$car[marca] $car[modelo]") ?> <span class="banner-year"><?= $car['ano_modelo'] ?></span></h2>
+        <p class="banner-versao"><?= e($car['versao'] ?? '') ?></p>
+        <div class="banner-meta">
+          <span>📅 <?= $car['ano_fabricacao'] ?>/<?= $car['ano_modelo'] ?></span>
+          <span>⚙️ <?= km($car['km']) ?></span>
+          <?php if ($car['combustivel']): ?><span>⛽ <?= e($car['combustivel']) ?></span><?php endif; ?>
+          <?php if ($car['cambio']): ?><span>🔧 <?= e($car['cambio']) ?></span><?php endif; ?>
+        </div>
+        <div class="banner-price">
+          <?php if ($car['preco_promocional']): ?><span class="banner-price-old"><?= brl($car['preco']) ?></span><?php endif; ?>
+          <strong><?= brl($preco) ?></strong>
+        </div>
+        <div class="banner-actions">
+          <a href="/estoque/<?= $car['id'] ?>" class="btn btn-primary">Ver detalhes</a>
+          <a href="<?= e(whatsappLink($wa, $msg)) ?>" target="_blank" class="btn btn-wa">💬 Falar no WhatsApp</a>
+        </div>
+      </div>
+    </article>
+    <?php endforeach; ?>
+  </div>
+
+  <?php if (count($bannerCars) > 1): ?>
+    <button class="banner-nav prev" type="button" aria-label="Anterior" onclick="bannerGo(-1)">‹</button>
+    <button class="banner-nav next" type="button" aria-label="Próximo" onclick="bannerGo(1)">›</button>
+    <div class="banner-dots">
+      <?php foreach ($bannerCars as $i => $_): ?>
+        <button class="banner-dot <?= $i === 0 ? 'active' : '' ?>" type="button" data-go="<?= $i ?>" onclick="bannerSet(<?= $i ?>)" aria-label="Slide <?= $i+1 ?>"></button>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+</section>
+
+<script>
+(function(){
+  var root = document.getElementById('bannerCarousel'); if (!root) return;
+  var n = parseInt(root.dataset.count, 10); if (n < 2) return;
+  var idx = 0, timer;
+  function show(i){
+    idx = (i + n) % n;
+    root.querySelectorAll('.banner-slide').forEach(function(s, k){ s.classList.toggle('active', k === idx); });
+    root.querySelectorAll('.banner-dot').forEach(function(d, k){ d.classList.toggle('active', k === idx); });
+  }
+  window.bannerGo = function(d){ show(idx + d); reset(); };
+  window.bannerSet = function(i){ show(i); reset(); };
+  function reset(){ clearInterval(timer); timer = setInterval(function(){ show(idx + 1); }, 6000); }
+  root.addEventListener('mouseenter', function(){ clearInterval(timer); });
+  root.addEventListener('mouseleave', reset);
+  reset();
+})();
+</script>
+<?php endif; ?>
+
 <section class="hero">
   <div class="hero-bg"></div><div class="hero-glow"></div>
   <div class="container" style="position:relative">

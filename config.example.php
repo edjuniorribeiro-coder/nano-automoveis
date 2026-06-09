@@ -33,4 +33,17 @@ return [
 
     // Segurança — gere uma string aleatória longa
     'app_key' => 'TROQUE-POR-UMA-STRING-ALEATORIA-LONGA',
+
+    // === Deploy automático via webhook do GitHub ===
+    // Veja DEPLOY.md para o setup completo.
+    'deploy' => [
+        // Mesmo segredo que você colar no GitHub → Webhooks → "Secret"
+        'secret'      => 'TROQUE-POR-UMA-STRING-ALEATORIA-LONGA-DIFERENTE',
+        // Caminho ABSOLUTO do repositório git clonado pelo cPanel
+        // (cPanel → Git Version Control → "Caminho do repositório")
+        'repo_path'   => '/home1/edjuni41/repositories/nano-automoveis',
+        // Pasta onde o site está servido (DEPLOYPATH do .cpanel.yml)
+        'deploy_path' => '/home1/edjuni41/nano.waveenterprise.com.br',
+        'branch'      => 'main',
+    ],
 ];
