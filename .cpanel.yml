@@ -3,7 +3,7 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home1/edjuni41/nano.waveenterprise.com.br/
     - /bin/mkdir -p $DEPLOYPATH
-    - /bin/cp -R index.php actions.php $DEPLOYPATH
+    - /bin/cp -R index.php actions.php deploy.php $DEPLOYPATH
     - /bin/cp -R lib views assets sql $DEPLOYPATH
     - /bin/cp .htaccess $DEPLOYPATH
     - /bin/cp .user.ini $DEPLOYPATH
